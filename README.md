@@ -13,6 +13,26 @@ node Runtime.js
 
 `Print`函数写入`output.txt`内, 每个输出内容之间用空格分割.
 
+## 主要Feature
+
+基本语法树参考`语法说明.docx`文件.
+
+主要实现了基本的语法和高阶函数功能.
+
+### 高阶函数
+
+1. 函数可以作为参数传递, 例如: *测试文件4*
+2. 函数同变量一样, 可以进行赋值等操作, 例如:
+```
+    Var m End
+    Function g Paras z
+    Begin
+        Return Mult x z
+    End
+    Assign m g 
+```
+3. 函数可以被返回
+
 ## 测试文件说明
 
 1. fact.mini
