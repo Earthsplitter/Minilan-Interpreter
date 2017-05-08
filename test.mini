@@ -1,0 +1,13 @@
+Begin
+	Var x
+    End
+	Assign x 1
+	If Lt x 2
+	Begin
+       Read x
+	End
+	Else
+	Begin
+	End
+	Print x
+End
