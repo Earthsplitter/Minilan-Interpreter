@@ -34,7 +34,7 @@ let subType = ["Declaration", "Assign", "Read", "Print", "Return", "If", "While"
 const transAST = function () {
     const AST = spawn('./a.out').output;
     let words = AST.toString().split(/\s/);
-    let ASTWords;
+    let ASTWords = null;
     words.forEach((element, key) => {
         if (element === "TransStart") {
             ASTWords = words.slice(key+1);
@@ -69,13 +69,23 @@ const generateAST = function (termString, father) {
 
 };
 
-//生成语法树
+/**
+ * 生成语法树,根节点 root, 全局环境 globalEnv
+ */
 let obj = {};
 obj.stringValue = transAST();
 let root = generateAST(obj, null);
-
 let globalEnv = new Environment(null);
 
+/**
+ * 工具函数集合
+ */
+/**
+ * 查找变量值 / 函数上下文
+ * @param name 要查找的变量名/函数名
+ * @param env 作用域
+ * @returns {*} 返回变量值/函数上下文
+ */
 const lookupVariableValue = function (name, env) {
     let current = env;
     while (current !== null) {
@@ -92,6 +102,12 @@ const lookupVariableValue = function (name, env) {
         }
     }
 };
+/**
+ * 查找函数名
+ * @param name 要查找的函数名
+ * @param env 作用域
+ * @returns {*} 返回函数名所在的作用域
+ */
 const lookupVariableKey = function (name, env) {
     let current = env;
     while (current !== null) {
@@ -102,6 +118,12 @@ const lookupVariableKey = function (name, env) {
         }
     }
 };
+/**
+ * 执行 expr 运算
+ * @param root 要运算的Term
+ * @param env 作用域
+ * @returns {*} 返回结果
+ */
 const expr = function (root, env) {
     switch (root.subType) {
         case "VarName":
@@ -139,6 +161,12 @@ const expr = function (root, env) {
             break;
     }
 };
+/**
+ * 执行 boolexpr 运算
+ * @param root 要运算的Term
+ * @param env 作用域
+ * @returns {boolean}
+ */
 const boolexpr = function (root, env) {
     switch (root.subType) {
         case "Lt":
@@ -161,6 +189,11 @@ const boolexpr = function (root, env) {
             break;
     }
 };
+/**
+ * 函数执行前, 建立作用域
+ * @param funcName 要执行的函数上下文
+ * @returns {{}} 返回新建的作用域
+ */
 const newFunctionScope = function (funcName) {
     let obj = {};
     obj.root = funcName.root;
@@ -168,12 +201,18 @@ const newFunctionScope = function (funcName) {
     obj.env = new Environment(funcName.env.outerLink);
     return obj;
 };
+/**
+ * 执行函数, 用于 Call, Apply, If, While
+ * @param func 要执行的 Block 节点
+ */
 const exec = function (func) {
     let root = func.root;
     let env = func.env;
     for (let i = 0; i < root.children.length; i++) {
         let child = root.children[i];
+        // 顺序执行语句
         interpret(child, env);
+        // 返回值不为空, 说明执行了一条 Return 语句, 中断剩下语句执行
         if (env.returnValue !== null) {
             return;
         }
@@ -191,7 +230,9 @@ const interpret = function (root, env) {
         switch (root.subType) {
             case "Declaration":
                 // 默认值0
-                env.variables[root.children[0].value] = 0;
+                root.children.forEach((child) => {
+                    env.variables[child.value] = 0;
+                });
                 break;
             case "Assign":
                 variableName = root.children[0].value;
@@ -199,6 +240,7 @@ const interpret = function (root, env) {
                 variableEnv.variables[variableName] = expr(root.children[1], env);
                 break;
             case "Call":
+                // 函数调用, 创建作用域
                 let runningFunction = newFunctionScope(lookupVariableValue([root.children[0].value], env));
                 let i = 1;
                 runningFunction.params.forEach((para) => {
@@ -213,6 +255,7 @@ const interpret = function (root, env) {
                 break;
             case "Print":
                 fs.appendFileSync("output.txt", expr(root.children[0], env));
+                fs.appendFileSync("output.txt", " ");
                 break;
             case "Return":
                 env.returnValue = expr(root.children[0], env);
@@ -263,5 +306,3 @@ const interpret = function (root, env) {
 root.children.forEach((root) => {
     interpret(root, globalEnv);
 });
-
-// console.log(root.children[1].children[0]);
