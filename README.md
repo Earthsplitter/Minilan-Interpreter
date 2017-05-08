@@ -10,7 +10,11 @@
     *  输入: 变量 x
     *  输出: x!
     *  测试内容: 嵌套函数
-3. recursiveFact.mini
+3. recurFact.mini
     *  输入: 变量 x
     *  输出: x!
-    *  测试内容: 递归调用
+    *  测试内容: 递归调用(递归后直接 Return)
+4. recurFact2.mini
+    *  输入: 变量 x
+    *  输出: x!
+    *  测试内容: 递归调用作用域(在递归后继续运行)

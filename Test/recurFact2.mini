@@ -1,0 +1,18 @@
+Begin
+	Var x End
+	Function fact Paras i
+	Begin
+		If Lt i 2
+		Begin
+			Return i
+		End
+		Else
+		Begin
+		    Var y End
+		    Assign y Apply fact Argus Minus i 1 End
+			Return Mult i y
+		End
+	End
+	Read x
+	Print Apply fact Argus x End
+End

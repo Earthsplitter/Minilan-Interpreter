@@ -126,7 +126,7 @@ const expr = function (root, env) {
             return expr(root.children[0], env) % expr(root.children[1], env);
             break;
         case "Apply":
-            let runningFunction = lookupVariableValue([root.children[0].value], env);
+            let runningFunction = newFunctionScope(lookupVariableValue([root.children[0].value], env));
             let i = 1;
             runningFunction.params.forEach((para) => {
                 runningFunction.env.variables[para] = expr(root.children[i++], env);
@@ -161,6 +161,13 @@ const boolexpr = function (root, env) {
             break;
     }
 };
+const newFunctionScope = function (funcName) {
+    let obj = {};
+    obj.root = funcName.root;
+    obj.params = funcName.params;
+    obj.env = new Environment(funcName.env.outerLink);
+    return obj;
+};
 const exec = function (func) {
     let root = func.root;
     let env = func.env;
@@ -192,10 +199,10 @@ const interpret = function (root, env) {
                 variableEnv.variables[variableName] = expr(root.children[1], env);
                 break;
             case "Call":
-                let runningFunction = lookupVariableValue([root.children[0].value], env);
+                let runningFunction = newFunctionScope(lookupVariableValue([root.children[0].value], env));
                 let i = 1;
                 runningFunction.params.forEach((para) => {
-                    runningFunction.env.variables[para] = runningFunction.children[i++].value;
+                    runningFunction.env.variables[para] = expr(root.children[i++], env);
                 });
                 exec(runningFunction);
                 break;
