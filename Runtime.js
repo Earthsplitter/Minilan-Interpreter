@@ -17,10 +17,12 @@ let Term = function (kind, subType, value) {
 let Environment = function (outerLink) {
     this.outerLink = outerLink;
     this.variables = {};
+    this.returnValue = null;
 };
-let func = function (root, env) {
+let func = function (root, env, params) {
     this.root = root;
     this.env = env;
+    this.params = params;
 };
 let kind = ["Block", "Function", "Command", "Expr", "BoolExpr", "Name"];
 let subType = ["Declaration", "Assign", "Read", "Print", "Return", "If", "While", "Call", "Number", "VarName",
@@ -72,15 +74,19 @@ let obj = {};
 obj.stringValue = transAST();
 let root = generateAST(obj, null);
 
-// console.log(root.children[1]);
-
 let globalEnv = new Environment(null);
 
 const lookupVariableValue = function (name, env) {
     let current = env;
     while (current !== null) {
         if (current.variables[name]) {
-            return Number(current.variables[name]);
+            if (typeof current.variables[name] === "object") {
+                // 返回函数
+                return current.variables[name];
+            } else {
+                // 返回变量
+                return Number(current.variables[name]);
+            }
         } else {
             current = current.outerLink;
         }
@@ -120,6 +126,16 @@ const expr = function (root, env) {
             return expr(root.children[0], env) % expr(root.children[1], env);
             break;
         case "Apply":
+            let runningFunction = lookupVariableValue([root.children[0].value], env);
+            let i = 1;
+            runningFunction.params.forEach((para) => {
+                runningFunction.env.variables[para] = expr(root.children[i++], env);
+            });
+            exec(runningFunction);
+            return runningFunction.env.returnValue;
+            break;
+        default:
+            console.log("ERROR");
             break;
     }
 };
@@ -148,9 +164,13 @@ const boolexpr = function (root, env) {
 const exec = function (func) {
     let root = func.root;
     let env = func.env;
-    root.children.forEach((root) => {
-        interpret(root, env);
-    })
+    for (let i = 0; i < root.children.length; i++) {
+        let child = root.children[i];
+        interpret(child, env);
+        if (env.returnValue !== null) {
+            return;
+        }
+    }
 };
 
 const interpret = function (root, env) {
@@ -172,6 +192,12 @@ const interpret = function (root, env) {
                 variableEnv.variables[variableName] = expr(root.children[1], env);
                 break;
             case "Call":
+                let runningFunction = lookupVariableValue([root.children[0].value], env);
+                let i = 1;
+                runningFunction.params.forEach((para) => {
+                    runningFunction.env.variables[para] = runningFunction.children[i++].value;
+                });
+                exec(runningFunction);
                 break;
             case "Read":
                 variableName = root.children[0].value;
@@ -181,16 +207,19 @@ const interpret = function (root, env) {
             case "Print":
                 fs.appendFileSync("output.txt", expr(root.children[0], env));
                 break;
+            case "Return":
+                env.returnValue = expr(root.children[0], env);
+                break;
             case "If":
                 boolResult = boolexpr(root.children[0], env);
-                newEnv = new Environment(env);
                 if (boolResult) {
-                    newFunc = new func(root.children[1], newEnv);
+                    newFunc = new func(root.children[1], new Environment(env));
                     exec(newFunc);
                 } else {
-                    newFunc = new func(root.children[2], newEnv);
+                    newFunc = new func(root.children[2], new Environment(env));
                     exec(newFunc);
                 }
+                env.returnValue = newFunc.env.returnValue;
                 break;
             case "While":
                 boolResult = boolexpr(root.children[0], env);
@@ -198,11 +227,29 @@ const interpret = function (root, env) {
                 newFunc = new func(root.children[1], newEnv);
                 while (boolResult) {
                     exec(newFunc);
+                    if (newFunc.env.returnValue !== null) {
+                        env.returnValue = newFunc.env.returnValue;
+                        return;
+                    }
                     boolResult = boolexpr(root.children[0], env);
                 }
                 break;
+            default:
+                console.log("ERROR");
+                break;
         }
+    } else if (root.kind === "Function") {
+        let functionName = root.children[0].value;
+        let functionEnv = new Environment(env);
+        let functionParams = [];
+        let i = 1;
+        for (i = 1; root.children[i].kind !== "Block"; i++) {
+            functionParams.push(root.children[i].value);
+            functionEnv.variables[root.children[i].value] = 0;
+        }
+        env.variables[functionName] = new func(root.children[i], functionEnv, functionParams);
     }
+
 };
 
 // 开始执行
@@ -210,4 +257,4 @@ root.children.forEach((root) => {
     interpret(root, globalEnv);
 });
 
-// console.log(root.children[2].children[1]);
+// console.log(root.children[1].children[0]);
