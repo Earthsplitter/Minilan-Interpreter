@@ -219,6 +219,11 @@ const exec = function (func) {
     }
 };
 
+/**
+ * 主逻辑, 负责函数声明/命令执行
+ * @param root 要执行的指令节点
+ * @param env 作用域
+ */
 const interpret = function (root, env) {
     let variableName = null;
     let variableEnv = null;
