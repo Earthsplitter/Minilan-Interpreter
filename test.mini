@@ -2,12 +2,9 @@ Begin
 	Var x
     End
 	Assign x 1
-	If Lt x 2
+	While Lt x 4
 	Begin
-       Read x
+       Assign x Plus x 1
+       Print x
 	End
-	Else
-	Begin
-	End
-	Print x
 End

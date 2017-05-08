@@ -2,6 +2,9 @@ const spawn = require('child_process').spawnSync;
 const fs = require('fs');
 
 const inputString = fs.readFileSync("./input.txt").toString().split(/\s/);
+// 创建文件
+fs.writeFileSync("./output.txt", "");
+
 let globalInputCount = 0;
 
 let Term = function (kind, subType, value) {
@@ -14,7 +17,6 @@ let Term = function (kind, subType, value) {
 let Environment = function (outerLink) {
     this.outerLink = outerLink;
     this.variables = {};
-    this.anonymousBlock = [];
 };
 let func = function (root, env) {
     this.root = root;
@@ -70,15 +72,25 @@ let obj = {};
 obj.stringValue = transAST();
 let root = generateAST(obj, null);
 
-console.log(root.children[1]);
+// console.log(root.children[1]);
 
 let globalEnv = new Environment(null);
 
-const lookupVariable = function (name, env) {
+const lookupVariableValue = function (name, env) {
     let current = env;
     while (current !== null) {
         if (current.variables[name]) {
-            return current.variables[name];
+            return Number(current.variables[name]);
+        } else {
+            current = current.outerLink;
+        }
+    }
+};
+const lookupVariableKey = function (name, env) {
+    let current = env;
+    while (current !== null) {
+        if (Object.keys(current.variables).includes(name)) {
+            return current;
         } else {
             current = current.outerLink;
         }
@@ -87,10 +99,10 @@ const lookupVariable = function (name, env) {
 const expr = function (root, env) {
     switch (root.subType) {
         case "VarName":
-            return lookupVariable(root.value, env);
+            return lookupVariableValue(root.value, env);
             break;
         case "Number":
-            return root.value;
+            return Number(root.value);
             break;
         case "Plus":
             return expr(root.children[0], env) + expr(root.children[1], env);
@@ -133,11 +145,21 @@ const boolexpr = function (root, env) {
             break;
     }
 };
-const exec = function () {
-    
-}
+const exec = function (func) {
+    let root = func.root;
+    let env = func.env;
+    root.children.forEach((root) => {
+        interpret(root, env);
+    })
+};
 
 const interpret = function (root, env) {
+    let variableName = null;
+    let variableEnv = null;
+
+    let boolResult = null;
+    let newEnv = null;
+    let newFunc = null;
     if (root.kind === "Command") {
         switch (root.subType) {
             case "Declaration":
@@ -145,25 +167,38 @@ const interpret = function (root, env) {
                 env.variables[root.children[0].value] = 0;
                 break;
             case "Assign":
-                env.variables[root.children[0].value] = expr(root.children[1], env);
+                variableName = root.children[0].value;
+                variableEnv = lookupVariableKey(variableName, env);
+                variableEnv.variables[variableName] = expr(root.children[1], env);
                 break;
             case "Call":
                 break;
             case "Read":
-                env.variables[root.children[0].value] = inputString[globalInputCount++];
+                variableName = root.children[0].value;
+                variableEnv = lookupVariableKey(variableName, env);
+                variableEnv.variables[variableName] = inputString[globalInputCount++];
                 break;
             case "Print":
-                fs.writeFileSync("output.txt", expr(root.children[0], env));
+                fs.appendFileSync("output.txt", expr(root.children[0], env));
                 break;
             case "If":
-                let boolResult = boolexpr(root.children[0], env);
-                let newEnv = new Environment(env);
-                let newFunc = null;
+                boolResult = boolexpr(root.children[0], env);
+                newEnv = new Environment(env);
                 if (boolResult) {
                     newFunc = new func(root.children[1], newEnv);
-                    exec();
+                    exec(newFunc);
                 } else {
                     newFunc = new func(root.children[2], newEnv);
+                    exec(newFunc);
+                }
+                break;
+            case "While":
+                boolResult = boolexpr(root.children[0], env);
+                newEnv = new Environment(env);
+                newFunc = new func(root.children[1], newEnv);
+                while (boolResult) {
+                    exec(newFunc);
+                    boolResult = boolexpr(root.children[0], env);
                 }
                 break;
         }
@@ -171,7 +206,8 @@ const interpret = function (root, env) {
 };
 
 // 开始执行
-// root.children.forEach((root) => {
-//     interpret(root, globalEnv);
-// });
-console.log(root.children[2]);
+root.children.forEach((root) => {
+    interpret(root, globalEnv);
+});
+
+// console.log(root.children[2].children[1]);
