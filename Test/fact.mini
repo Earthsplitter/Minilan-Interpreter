@@ -16,5 +16,5 @@ Begin
 	End
 
 	Read x
-	Print Apply fact Argus 4 End
+	Print Apply fact Argus x End
 End

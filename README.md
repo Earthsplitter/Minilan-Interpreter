@@ -3,11 +3,19 @@
 ## Getting Started
 
 在安装有 Node.js 环境下, 输入以下命令运行
-```shell
+```bash
+npm install -g node-gyp
+node-gyp configure
+node-gyp build
 node Runtime.js
 ```
 
-源代码默认为 `test.mini` 文件. 如需修改, 在 `Term.cpp` 中修改, 并用 g++ 重新编译生成 `a.out`文件.
+1. 第一步安装 node-gyp
+2. 第二步根据操作系统生成配置文件 `Makefile` (Unix) 或者 `vcxproj` (Windows)
+3. 第三步 Build 生成 `*.node` 模块便于调用
+4. 第四步执行测试代码.
+
+源代码地址在 `Runtime.js` 文件中第六行设置.
 
 其中, `Read`函数读取`input.txt`里的内容, 每个输入内容之间用空格分割. 
 
@@ -37,8 +45,13 @@ node Runtime.js
 
 垃圾主要来自于2个方面:
 1. 函数调用结束后回收:
+    1. 函数不返回引用(函数闭包): 函数调用只有2个入口: `Call` 和 `Apply`, 在这两个位置调用结束后销毁生成的作用域即可.
+    2. 函数返回引用(嵌套函数闭包): 因为函数返回了一个闭包, 因此其作用域必须保存, 不能直接销毁.
+2. 引用计数:
 
-2. 引用和去引用的过程:
+    Minilan 语言中, 唯一的的引用类型是函数.
+    
+    因此对每一个声明的函数增加一个域`reference`追踪引用数, 每次 Assign 检查被赋值的变量的原值和新值, 更新引用值. 当引用为0, 删除该作用域
 
 
 ## 测试文件说明

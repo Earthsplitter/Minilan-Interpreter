@@ -1,12 +1,26 @@
 const spawn = require('child_process').spawnSync;
 const fs = require('fs');
+const term = require('./build/Release/term.node');
 
+// 源代码地址
+const source = "./Test/fact.mini";
+// 读入 input 内容, 并分割好留待使用
 const inputString = fs.readFileSync("./input.txt").toString().split(/\s/);
-// 创建文件
+// 模拟文件指针进行文件读取
+let globalInputCount = 0;
+// 创建 output 文件
 fs.writeFileSync("./output.txt", "");
 
-let globalInputCount = 0;
+/**
+ * 符号表
+ */
+let kind = ["Block", "Function", "Command", "Expr", "BoolExpr", "Name"];
+let subType = ["Declaration", "Assign", "Read", "Print", "Return", "If", "While", "Call", "Number", "VarName",
+    "Plus", "Minus", "Mult", "Div", "Mod", "Apply", "Lt", "Gt", "Eq", "And", "Or", "Negb"];
 
+/**
+ * 数据结构定义, 包括语法树, 作用域, 函数上下文
+ */
 let Term = function (kind, subType, value) {
     this.kind = kind;
     this.subType = subType;
@@ -24,15 +38,12 @@ let func = function (root, env, params) {
     this.env = env;
     this.params = params;
 };
-let kind = ["Block", "Function", "Command", "Expr", "BoolExpr", "Name"];
-let subType = ["Declaration", "Assign", "Read", "Print", "Return", "If", "While", "Call", "Number", "VarName",
-                "Plus", "Minus", "Mult", "Div", "Mod", "Apply", "Lt", "Gt", "Eq", "And", "Or", "Negb"];
 
 /**
  * 调用提供的语法分析程序, 输出语法树
  */
 const transAST = function () {
-    const AST = spawn('./a.out').output;
+    const AST = term.parse(source);
     let words = AST.toString().split(/\s/);
     let ASTWords = null;
     words.forEach((element, key) => {
