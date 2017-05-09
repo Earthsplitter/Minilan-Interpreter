@@ -1,0 +1,22 @@
+Begin
+    Var x y End
+
+    Function a Paras i
+    Begin
+        Return i
+    End
+
+    Function b Paras i
+    Begin
+        Return i
+    End
+
+    Call a Argus 1 End
+    Call b Argus 1 End
+
+    Assign x a
+    Assign y a
+    Assign x b
+    Assign y b
+    Assign a b
+End

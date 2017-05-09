@@ -1,8 +1,11 @@
 const fs = require('fs');
 const term = require('./build/Release/term.node');
 
+// Debug Mode, 是否输出运行状态
+const debugMode = 1;
+
 // 源代码地址
-const source = "./Test/fact.mini";
+const source = "./Test/gc.mini";
 // 读入 input 内容, 并分割好留待使用
 const inputString = fs.readFileSync("./input.txt").toString().split(/\s/);
 // 模拟文件指针进行文件读取
@@ -32,10 +35,12 @@ let Environment = function (outerLink) {
     this.variables = {};
     this.returnValue = null;
 };
-let func = function (root, env, params) {
+let func = function (root, env, params, name) {
     this.root = root;
     this.env = env;
     this.params = params;
+    this.reference = 1;
+    this.name = name;
 };
 
 /**
@@ -158,13 +163,22 @@ const expr = function (root, env) {
             return expr(root.children[0], env) % expr(root.children[1], env);
             break;
         case "Apply":
+            if (debugMode) {
+                console.log("Call Function: " + root.children[0].value);
+            }
+            // 函数调用, 生成作用域
             let runningFunction = newFunctionScope(lookupVariableValue([root.children[0].value], env));
             let i = 1;
             runningFunction.params.forEach((para) => {
                 runningFunction.env.variables[para] = expr(root.children[i++], env);
             });
             exec(runningFunction);
-            return runningFunction.env.returnValue;
+            // 检测返回值, 如果不是函数, 销毁作用域
+            let returnValue = runningFunction.env.returnValue;
+            if (typeof returnValue !== "object") {
+                free(root.children[0].value, runningFunction);
+            }
+            return returnValue;
             break;
         default:
             console.log("ERROR");
@@ -228,6 +242,21 @@ const exec = function (func) {
         }
     }
 };
+/**
+ * 释放作用域
+ */
+const free = function (funcName, funcTerm, refer) {
+    if (debugMode) {
+        if (refer === 1) {
+            // 引用归零, 销毁函数
+            console.log("Reference become 0. Function " + funcName + " has been collected.");
+        } else {
+            // 函数运行结束, 销毁作用域
+            console.log("Free Function " + funcName);
+        }
+    }
+    funcTerm = null;
+};
 
 /**
  * 主逻辑, 负责函数声明/命令执行
@@ -250,11 +279,36 @@ const interpret = function (root, env) {
                 });
                 break;
             case "Assign":
+                // 获取变量所在的作用域(左值)
                 variableName = root.children[0].value;
                 variableEnv = lookupVariableKey(variableName, env);
+                // 检测被赋值变量是否是函数, 是函数则引用减少
+                if (typeof variableEnv.variables[variableName] === "object") {
+                    variableEnv.variables[variableName].reference--;
+                    if (debugMode) {
+                        console.log("Function " + variableEnv.variables[variableName].name + " has been dereferred. Reference = " + variableEnv.variables[variableName].reference);
+                    }
+                    // 检测引用是否为0, 为0则释放
+                    if (variableEnv.variables[variableName].reference === 0) {
+                        free(variableName, variableEnv.variables[variableName], 1);
+                    }
+                }
+
+                // 赋值操作
                 variableEnv.variables[variableName] = expr(root.children[1], env);
+
+                // 检测赋值后是否是函数, 是函数则引用递加
+                if (typeof variableEnv.variables[variableName] === "object") {
+                    variableEnv.variables[variableName].reference++;
+                    if (debugMode) {
+                        console.log("Function " + variableEnv.variables[variableName].name + " has been referred. Reference = " + variableEnv.variables[variableName].reference);
+                    }
+                }
                 break;
             case "Call":
+                if (debugMode) {
+                    console.log("Call Function: " + root.children[0].value);
+                }
                 // 函数调用, 创建作用域
                 let runningFunction = newFunctionScope(lookupVariableValue([root.children[0].value], env));
                 let i = 1;
@@ -262,6 +316,8 @@ const interpret = function (root, env) {
                     runningFunction.env.variables[para] = expr(root.children[i++], env);
                 });
                 exec(runningFunction);
+                // 销毁作用域
+                free(root.children[0].value, runningFunction);
                 break;
             case "Read":
                 variableName = root.children[0].value;
@@ -312,7 +368,10 @@ const interpret = function (root, env) {
             functionParams.push(root.children[i].value);
             functionEnv.variables[root.children[i].value] = 0;
         }
-        env.variables[functionName] = new func(root.children[i], functionEnv, functionParams);
+        env.variables[functionName] = new func(root.children[i], functionEnv, functionParams, functionName);
+        if (debugMode) {
+            console.log("Function " + functionName +" created. Reference = " + env.variables[functionName].reference);
+        }
     }
 
 };

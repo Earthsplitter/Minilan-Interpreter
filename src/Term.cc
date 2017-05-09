@@ -17,7 +17,7 @@ using v8::Value;
 #include<string>
 #include<cstdlib>
 #ifndef DEBUG_MODE
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 #endif
 bool isnumber(const std::string &str){
 	size_t i;
