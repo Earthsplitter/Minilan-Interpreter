@@ -5,7 +5,7 @@ const term = require('./build/Release/term.node');
 const debugMode = 1;
 
 // 源代码地址
-const source = "./Test/gc.mini";
+const source = "./Test/fact.mini";
 // 读入 input 内容, 并分割好留待使用
 const inputString = fs.readFileSync("./input.txt").toString().split(/\s/);
 // 模拟文件指针进行文件读取

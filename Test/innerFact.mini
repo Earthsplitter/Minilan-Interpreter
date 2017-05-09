@@ -16,7 +16,7 @@ Begin
 		While Gt i 1
 		Begin
 		    Assign y Mult y i
-		    Assign i Apply inc Argus i 1 End
+		    Assign i Apply dec Argus i 1 End
 		End
 		Return y
 	End
