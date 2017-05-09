@@ -1,4 +1,3 @@
-const spawn = require('child_process').spawnSync;
 const fs = require('fs');
 const term = require('./build/Release/term.node');
 
