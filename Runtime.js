@@ -13,6 +13,8 @@ let globalInputCount = 0;
 // 创建 output 文件
 fs.writeFileSync("./output.txt", "");
 
+
+let runningFun = null;
 /**
  * 符号表
  */
@@ -105,6 +107,14 @@ const lookupVariableValue = function (name, env) {
     let current = env;
     while (current !== null) {
         if (current.variables[name] !== undefined) {
+            // 比较位置
+            if (runningFun !== null) {
+                let keys = Object.keys(current.variables);
+                if (keys.indexOf(runningFun) !== -1 && keys.indexOf(name) > keys.indexOf(runningFun)) {
+                    current = current.outerLink;
+                    continue;
+                }
+            }
             if (typeof current.variables[name] === "object") {
                 // 返回函数
                 return current.variables[name];
@@ -157,7 +167,7 @@ const expr = function (root, env) {
             return expr(root.children[0], env) * expr(root.children[1], env);
             break;
         case "Div":
-            return expr(root.children[0], env) / expr(root.children[1], env);
+            return Math.floor(expr(root.children[0], env) / expr(root.children[1], env));
             break;
         case "Mod":
             return expr(root.children[0], env) % expr(root.children[1], env);
@@ -172,12 +182,14 @@ const expr = function (root, env) {
             runningFunction.params.forEach((para) => {
                 runningFunction.env.variables[para] = expr(root.children[i++], env);
             });
+            runningFun = root.children[0].value;
             exec(runningFunction);
             // 检测返回值, 如果不是函数, 销毁作用域
             let returnValue = runningFunction.env.returnValue;
             if (typeof returnValue !== "object") {
                 free(root.children[0].value, runningFunction);
             }
+            runningFun = null;
             return returnValue;
             break;
         default:
@@ -310,14 +322,16 @@ const interpret = function (root, env) {
                     console.log("Call Function: " + root.children[0].value);
                 }
                 // 函数调用, 创建作用域
-                let runningFunction = newFunctionScope(lookupVariableValue([root.children[0].value], env));
+                let runningFunction = newFunctionScope(lookupVariableValue(root.children[0].value, env));
                 let i = 1;
                 runningFunction.params.forEach((para) => {
                     runningFunction.env.variables[para] = expr(root.children[i++], env);
                 });
+                runningFun = root.children[0].value
                 exec(runningFunction);
                 // 销毁作用域
                 free(root.children[0].value, runningFunction);
+                runningFun = null;
                 break;
             case "Read":
                 variableName = root.children[0].value;
