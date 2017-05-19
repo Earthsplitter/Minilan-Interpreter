@@ -104,7 +104,7 @@ let globalEnv = new Environment(null);
 const lookupVariableValue = function (name, env) {
     let current = env;
     while (current !== null) {
-        if (current.variables[name]) {
+        if (current.variables[name] !== undefined) {
             if (typeof current.variables[name] === "object") {
                 // 返回函数
                 return current.variables[name];
